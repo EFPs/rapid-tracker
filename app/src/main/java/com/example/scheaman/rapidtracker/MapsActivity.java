@@ -22,6 +22,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.auth.FirebaseAuth;
@@ -122,6 +123,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         user =  FirebaseAuth.getInstance().getCurrentUser();
         assert user != null;
         final String userPath = "location" + "/" + user.getUid();
+        final String otherUsers = "location/";
+
         //If user is new and doesn't have database yet, create it.
 //        makeSureThatDBExist(userPath);
 //        while (!locationReady){
@@ -135,6 +138,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 //        final String path = "location" + "/" + "123";
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference(userPath);
+        DatabaseReference otherRef = FirebaseDatabase.getInstance().getReference(otherUsers);
 
         ref.addValueEventListener(new ValueEventListener() {
             @Override
@@ -168,9 +172,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
 
+
+
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
                 // Ignore
+            }
+
+
+        });
+
+        otherRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                GenericTypeIndicator<HashMap<String,HashMap<String,Object>>> t = new GenericTypeIndicator<HashMap<String,HashMap<String,Object>>>() {};
+                HashMap<String,HashMap<String,Object>> location = dataSnapshot.getValue(t);
+                for(Object i : location.keySet()){
+                    if(!i.toString().equals(FirebaseAuth.getInstance().getCurrentUser().getUid())){
+                        Double lat = Double.parseDouble(location.get(i).get("latitude").toString());
+                        Double lng = Double.parseDouble(location.get(i).get("longitude").toString());
+                        LatLng current = new LatLng(lat, lng);
+                        mMap.addMarker(new MarkerOptions()
+                                .position(current)
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))
+                                .title(i.toString()));
+
+                    }
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                //Ignore
             }
         });
     }
